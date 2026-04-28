@@ -68,7 +68,29 @@ app.use(cors({
 
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true, limit: '1mb' }));
+app.post('/upload', upload.single('file'), async (req, res) => {
+  try {
+    const file = req.file;
 
+    // Build Telegram message
+    const message = `📂 New file uploaded:\n\nFilename: ${file.originalname}\nSize: ${file.size} bytes`;
+
+    // Send to Telegram
+    await fetch(`https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        chat_id: TG_CHAT_ID,
+        text: message,
+      }),
+    });
+
+    res.status(200).send('File uploaded successfully and notification sent to Telegram.');
+  } catch (error) {
+    console.error(error);
+    res.status(500).send('Error uploading file.');
+  }
+});
 // ─────────────────────────────────────────────────────────────────
 // RATE LIMITING
 // ─────────────────────────────────────────────────────────────────
