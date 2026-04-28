@@ -50,24 +50,35 @@ if (!TG_BOT_TOKEN || !TG_CHAT_ID) {
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 });
 
-// ─────────────────────────────────────────────────────────────────
+// ────────────────────────────────────────────────────>
 // EXPRESS APP
-// ─────────────────────────────────────────────────────────────────
+// ────────────────────────────────────────────────────>
 const app = express();
 
 // Security headers
 app.use(helmet({
-  contentSecurityPolicy: false,   // frontend uses inline styles
+  contentSecurityPolicy: false,   // frontend uses inline scripts/styles
 }));
 
 // CORS — only allow the subdomain
 app.use(cors({
-  origin: NODE_ENV === 'development' ? '*' : ALLOWED_ORIGIN=https://christocentrictrader-fronte.onrender.com ,
+  origin: NODE_ENV === 'development' ? '*' : ALLOWED_ORIGIN,
   methods: ['GET', 'POST'],
 }));
 
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true, limit: '1mb' }));
+
+// ────────────────────────────────────────────────────>
+// ROUTES
+// ────────────────────────────────────────────────────>
+
+// Default route (health check)
+app.get('/', (req, res) => {
+  res.send('Backend is running. Use /submit or /upload.');
+});
+
+// Upload route
 app.post('/upload', upload.single('file'), async (req, res) => {
   try {
     const file = req.file;
@@ -91,17 +102,19 @@ app.post('/upload', upload.single('file'), async (req, res) => {
     res.status(500).send('Error uploading file.');
   }
 });
+
+// Submit route
 app.post('/submit', async (req, res) => {
   try {
     const { name, email, account, broker, tier, msg } = req.body;
 
     const message = `📝 New form submission:\n
-    Name: ${name}\n
-    Email: ${email}\n
-    Account: ${account}\n
-    Broker: ${broker}\n
-    Tier: ${tier}\n
-    Notes: ${msg || 'None'}`;
+Name: ${name}\n
+Email: ${email}\n
+Account: ${account}\n
+Broker: ${broker}\n
+Tier: ${tier}\n
+Notes: ${msg || 'None'}`;
 
     await fetch(`https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage`, {
       method: 'POST',
@@ -117,6 +130,14 @@ app.post('/submit', async (req, res) => {
     console.error(error);
     res.status(500).send('Error submitting form.');
   }
+});
+
+// ────────────────────────────────────────────────────>
+// START SERVER
+// ────────────────────────────────────────────────────>
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
 });
 // ─────────────────────────────────────────────────────────────────
 // RATE LIMITING
