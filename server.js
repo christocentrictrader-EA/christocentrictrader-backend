@@ -62,7 +62,7 @@ app.use(helmet({
 
 // CORS — only allow the subdomain
 app.use(cors({
-  origin: NODE_ENV === 'development' ? '*' : ALLOWED_ORIGIN,
+  origin: NODE_ENV === 'development' ? '*' : ALLOWED_ORIGIN=https://christocentrictrader-fronte.onrender.com ,
   methods: ['GET', 'POST'],
 }));
 
@@ -89,6 +89,33 @@ app.post('/upload', upload.single('file'), async (req, res) => {
   } catch (error) {
     console.error(error);
     res.status(500).send('Error uploading file.');
+  }
+});
+app.post('/submit', async (req, res) => {
+  try {
+    const { name, email, account, broker, tier, msg } = req.body;
+
+    const message = `📝 New form submission:\n
+    Name: ${name}\n
+    Email: ${email}\n
+    Account: ${account}\n
+    Broker: ${broker}\n
+    Tier: ${tier}\n
+    Notes: ${msg || 'None'}`;
+
+    await fetch(`https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        chat_id: TG_CHAT_ID,
+        text: message,
+      }),
+    });
+
+    res.status(200).send('Form submitted successfully and notification sent to Telegram.');
+  } catch (error) {
+    console.error(error);
+    res.status(500).send('Error submitting form.');
   }
 });
 // ─────────────────────────────────────────────────────────────────
