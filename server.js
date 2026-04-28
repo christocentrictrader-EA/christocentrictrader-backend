@@ -273,9 +273,9 @@ app.get('/downloads/:filename', (req, res) => {
 });
 
 // ── Serve frontend (static) ──────────────────────────
-//const FRONTEND = path.join(__dirname, '../frontend');
-//app.use(express.static(FRONTEND));
-//app.get('*', (req, res) => res.sendFile(path.join(FRONTEND, 'index.html')));
+const FRONTEND = path.join(__dirname, '../frontend');
+app.use(express.static(FRONTEND));
+app.get('*', (req, res) => res.sendFile(path.join(FRONTEND, 'index.html')));
 
 // ────────────────────────────────────────────────────
 // START SERVER
