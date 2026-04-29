@@ -223,7 +223,7 @@ app.post('/api/payment-proof', apiLimiter, upload.single('file'), async (req, re
     const methodLabel = {
       bank_ng : 'Bank Transfer (NGN)',
       usdt    : 'USDT TRC20',
-      btc     : 'Bitcoin (BTC)',
+      usdt     : 'USDT BEP20',
       other   : 'Other',
     }[method] || method;
 
