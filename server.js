@@ -12,6 +12,9 @@
  */
 
 
+// ─────────────────────────────────────────────
+// ENV + DEPENDENCIES
+// ─────────────────────────────────────────────
 require('dotenv').config();
 const express    = require('express');
 const multer     = require('multer');
@@ -20,6 +23,8 @@ const fs         = require('fs');
 const cors       = require('cors');
 const helmet     = require('helmet');
 const rateLimit  = require('express-rate-limit');
+
+const app = express();
 
 // Dynamic import wrapper for node-fetch
 const fetch = (...args) =>
@@ -140,19 +145,6 @@ async function tgSendFile(filePath, caption) {
 const isValidMT5    = v => /^[0-9]{5,12}$/.test((v || '').trim());
 const isValidEmail  = v => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test((v || '').trim());
 const sanitize      = v => String(v || '').replace(/[<>]/g, '');
-
-// ─────────────────────────────────────────────
-// ENV + DEPENDENCIES
-// ─────────────────────────────────────────────
-require('dotenv').config();
-const multer     = require('multer');
-const path       = require('path');
-const fs         = require('fs');
-const cors       = require('cors');
-const helmet     = require('helmet');
-const rateLimit  = require('express-rate-limit');
-
-const app = express();
 
 // ─────────────────────────────────────────────
 // SECURITY MIDDLEWARE
