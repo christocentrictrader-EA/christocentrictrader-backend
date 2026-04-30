@@ -141,18 +141,41 @@ const isValidMT5    = v => /^[0-9]{5,12}$/.test((v || '').trim());
 const isValidEmail  = v => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test((v || '').trim());
 const sanitize      = v => String(v || '').replace(/[<>]/g, '');
 
-// ────────────────────────────────────────────────────
-// EXPRESS APP
-// ────────────────────────────────────────────────────
+// ─────────────────────────────────────────────
+// EXPRESS APP SETUP
+// ─────────────────────────────────────────────
+const express = require('express');
+const helmet = require('helmet');
+const cors = require('cors');
+
 const app = express();
 
+// Security middleware
 app.use(helmet({ contentSecurityPolicy: false }));
-app.use(cors({
-  origin: NODE_ENV === 'development' ? '*' : ALLOWED_ORIGIN,
-  methods: ['GET', 'POST'],
-}));
+
+// CORS configuration
+app.use(
+  cors({
+    origin: process.env.NODE_ENV === 'development' ? '*' : process.env.ALLOWED_ORIGIN,
+    methods: ['GET', 'POST'],
+  })
+);
+
+// Body parsers
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true, limit: '1mb' }));
+
+// ─────────────────────────────────────────────
+// REQUEST LOGGING MIDDLEWARE
+// ─────────────────────────────────────────────
+app.use((req, res, next) => {
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
+  if (req.body && Object.keys(req.body).length > 0) {
+    console.log('Body:', req.body);
+  }
+  console.log('Origin:', req.headers.origin || 'No origin header');
+  next();
+});
 
 // ────────────────────────────────────────────────────
 // ROUTES
