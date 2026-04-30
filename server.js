@@ -142,41 +142,76 @@ const isValidEmail  = v => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test((v || '').trim());
 const sanitize      = v => String(v || '').replace(/[<>]/g, '');
 
 // ─────────────────────────────────────────────
-// EXPRESS APP SETUP
+// ENV + DEPENDENCIES
 // ─────────────────────────────────────────────
-const express = require('express');
-const helmet = require('helmet');
-const cors = require('cors');
+require('dotenv').config();
+const express    = require('express');
+const multer     = require('multer');
+const path       = require('path');
+const fs         = require('fs');
+const cors       = require('cors');
+const helmet     = require('helmet');
+const rateLimit  = require('express-rate-limit');
 
 const app = express();
 
-// Security middleware
+// ─────────────────────────────────────────────
+// SECURITY MIDDLEWARE
+// ─────────────────────────────────────────────
 app.use(helmet({ contentSecurityPolicy: false }));
-
-// CORS configuration
 app.use(
   cors({
     origin: process.env.NODE_ENV === 'development' ? '*' : process.env.ALLOWED_ORIGIN,
     methods: ['GET', 'POST'],
   })
 );
-
-// Body parsers
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 
 // ─────────────────────────────────────────────
-// REQUEST LOGGING MIDDLEWARE
+// RATE LIMITING
 // ─────────────────────────────────────────────
+// More relaxed limit for account submissions
+const accountLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 200,                 // allow up to 200 requests per IP
+  message: { ok: false, message: 'Too many account submissions, please try again later.' },
+});
+
+// Stricter limit for file uploads
+const uploadLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 50,                  // only 50 uploads per IP
+  message: { ok: false, message: 'Too many uploads, please try again later.' },
+});
+
+// Apply per-route
+app.use('/api/submit-account', accountLimiter);
+app.use('/api/payment-proof', uploadLimiter);
+
+// ─────────────────────────────────────────────
+// FILTERED REQUEST LOGGING MIDDLEWARE
+// ─────────────────────────────────────────────
+const logRoutes = ['/api/submit-account', '/api/payment-proof'];
 app.use((req, res, next) => {
-  console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
-  if (req.body && Object.keys(req.body).length > 0) {
-    console.log('Body:', req.body);
+  if (logRoutes.includes(req.path)) {
+    console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
+    if (req.body && Object.keys(req.body).length > 0) {
+      console.log('Body:', req.body);
+    }
+    console.log('Origin:', req.headers.origin || 'No origin header');
   }
-  console.log('Origin:', req.headers.origin || 'No origin header');
   next();
 });
 
+// ─────────────────────────────────────────────
+// ROOT ROUTE
+// ─────────────────────────────────────────────
+app.get('/', (req, res) => {
+  res.send('Backend service is running on custom domain');
+});
+
+module.exports = app;
 // ────────────────────────────────────────────────────
 // ROUTES
 // ────────────────────────────────────────────────────
