@@ -357,8 +357,6 @@ app.post('/api/submit-account', (req, res) => {
 });
 
 
-const multer = require('multer');
-
 const upload = multer({ dest: UPLOADS_DIR });
 
 
