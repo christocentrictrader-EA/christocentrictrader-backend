@@ -374,6 +374,13 @@ app.post('/api/payment-proof', upload.single('file'), (req, res) => {
 });
 
 //────────────────────────────────────────────────────
+//  ORIGIN LOGGING SNIPPET
+//────────────────────────────────────────────────────
+app.use((req, res, next) => {
+  console.log('Request Origin:', req.headers.origin);
+  next();
+});
+//────────────────────────────────────────────────────
 // API ROUTES
 //────────────────────────────────────────────────────
 app.post('/api/submit-account', (req, res) => {
@@ -386,12 +393,9 @@ app.post('/api/submit-account', (req, res) => {
 
 ;
 
-app.post('/api/payment-proof', upload.single('file'), (req, res) => {
-
-  console.log('Received /api/payment-proof upload:', req.file);
-
-  res.json({ message: 'Debug: file uploaded successfully', file: req.file });
-
+app.post('/api/payment-proof', upload.single('paymentProof'), (req, res) => {
+  console.log('Received upload:', req.file);
+  res.json({ message: 'File uploaded successfully', file: req.file });
 });
 
 //────────────────────────────────────────────────────
