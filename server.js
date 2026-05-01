@@ -357,8 +357,6 @@ app.post('/api/submit-account', (req, res) => {
 });
 
 
-const upload = multer({ dest: UPLOADS_DIR });
-
 
 app.post('/api/payment-proof', upload.single('file'), (req, res) => {
 
