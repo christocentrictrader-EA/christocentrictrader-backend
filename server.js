@@ -391,10 +391,10 @@ app.post('/api/submit-account', (req, res) => {
 
 });
 
-;
-
 app.post('/api/payment-proof', upload.single('paymentProof'), (req, res) => {
   console.log('Received upload:', req.file);
+  console.log('Body:', req.body);
+  console.log('File:', req.file);
   res.json({ message: 'File uploaded successfully', file: req.file });
 });
 
