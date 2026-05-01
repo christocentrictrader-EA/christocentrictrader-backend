@@ -151,33 +151,40 @@ const sanitize      = v => String(v || '').replace(/[<>]/g, '');
 // ─────────────────────────────────────────────
 app.use(helmet({ contentSecurityPolicy: false }));
 
-// Log incoming request origins
-app.use((req, res, next) => {
-  console.log('Incoming request Origin:', req.headers.origin);
-  next();
-});
+app.use(cors({
 
-const allowedOrigins = [
-  'https://christocentrictrader.d9thprofithub.com.ng',
-  'https://api.christocentrictrader.d9thprofithub.com.ng'
-];
+  origin: (origin, callback) => {
 
-app.use(
-  cors({
-    origin: (origin, callback) => {
-      if (!origin || allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        console.error('Blocked by CORS:', origin);
-        callback(new Error('Not allowed by CORS'));
-      }
-    },
-    methods: ['GET', 'POST'],
-  })
-);
+    const allowedOrigins = [
+
+      'https://christocentrictrader.d9thprofithub.com.ng',
+
+      'https://api.christocentrictrader.d9thprofithub.com.ng'
+
+    ];
+
+    if (!origin || allowedOrigins.includes(origin)) {
+
+      callback(null, true);
+
+    } else {
+
+      console.error('Blocked by CORS:', origin);
+
+      callback(new Error('Not allowed by CORS'));
+
+    }
+
+  },
+
+  methods: ['GET', 'POST'],
+
+}));
 
 app.use(express.json({ limit: '1mb' }));
+
 app.use(express.urlencoded({ extended: true, limit: '1mb' }));
+
 // ─────────────────────────────────────────────
 // RATE LIMITING
 // ─────────────────────────────────────────────
@@ -363,6 +370,37 @@ app.post('/api/payment-proof', upload.single('file'), (req, res) => {
   console.log('Received /api/payment-proof upload:', req.file);
 
   res.json({ message: 'Debug: file uploaded successfully', file: req.file });
+
+});
+
+//────────────────────────────────────────────────────
+// API ROUTES
+//────────────────────────────────────────────────────
+app.post('/api/submit-account', (req, res) => {
+
+  console.log('Received /api/submit-account request body:', req.body);
+
+  res.json({ message: 'Debug: request received successfully', data: req.body });
+
+});
+
+
+const upload = multer({ dest: UPLOADS_DIR });
+
+app.post('/api/payment-proof', upload.single('file'), (req, res) => {
+
+  console.log('Received /api/payment-proof upload:', req.file);
+
+  res.json({ message: 'Debug: file uploaded successfully', file: req.file });
+
+});
+
+//────────────────────────────────────────────────────
+// CATCH-ALL ROUTE FOR FRONTEND
+//────────────────────────────────────────────────────
+app.get('*', (req, res) => {
+
+  res.sendFile(path.join(__dirname, '../frontend/index.html'));
 
 });
 
