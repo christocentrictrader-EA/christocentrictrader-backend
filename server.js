@@ -37,7 +37,7 @@ const {
   PORT            = 3000,
   TG_BOT_TOKEN,
   TG_CHAT_ID,
-  ALLOWED_ORIGIN  = 'https://api.christocentrictrader.d9thprofithub.com.ng',
+  ALLOWED_ORIGIN  = 'https://christocentrictrader.d9thprofithub.com.ng',
   DOWNLOADS_DIR   = path.join(__dirname, '../downloads'),
   UPLOADS_DIR     = path.join(__dirname, 'uploads'),
   NODE_ENV        = 'production',
