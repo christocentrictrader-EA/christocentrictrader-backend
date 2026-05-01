@@ -150,15 +150,34 @@ const sanitize      = v => String(v || '').replace(/[<>]/g, '');
 // SECURITY MIDDLEWARE
 // ─────────────────────────────────────────────
 app.use(helmet({ contentSecurityPolicy: false }));
+
+// Log incoming request origins
+app.use((req, res, next) => {
+  console.log('Incoming request Origin:', req.headers.origin);
+  next();
+});
+
+const allowedOrigins = [
+  'https://christocentrictrader.d9thprofithub.com.ng',
+  'https://api.christocentrictrader.d9thprofithub.com.ng'
+];
+
 app.use(
   cors({
-    origin: process.env.NODE_ENV === 'development' ? '*' : process.env.ALLOWED_ORIGIN,
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        console.error('Blocked by CORS:', origin);
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
     methods: ['GET', 'POST'],
   })
 );
+
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true, limit: '1mb' }));
-
 // ─────────────────────────────────────────────
 // RATE LIMITING
 // ─────────────────────────────────────────────
@@ -325,6 +344,43 @@ app.get('/downloads/:filename', (req, res) => {
 const FRONTEND = path.join(__dirname, '../frontend');
 app.use(express.static(FRONTEND));
 app.get('*', (req, res) => res.sendFile(path.join(FRONTEND, 'index.html')));
+
+//────────────────────────────────────────────────────
+// DEBUG ROUTES
+//────────────────────────────────────────────────────
+app.post('/api/submit-account', (req, res) => {
+
+  console.log('Received /api/submit-account request body:', req.body);
+
+  res.json({ message: 'Debug: request received successfully', data: req.body });
+
+});
+
+
+const multer = require('multer');
+
+const upload = multer({ dest: UPLOADS_DIR });
+
+
+app.post('/api/payment-proof', upload.single('file'), (req, res) => {
+
+  console.log('Received /api/payment-proof upload:', req.file);
+
+  res.json({ message: 'Debug: file uploaded successfully', file: req.file });
+
+});
+
+//────────────────────────────────────────────────────
+// OPTIONAL ERROR HANDLER
+//────────────────────────────────────────────────────
+app.use((err, req, res, next) => {
+
+  console.error('Unhandled error:', err.message);
+
+  res.status(500).json({ error: 'Internal Server Error', details: err.message });
+
+});
+
 
 // ────────────────────────────────────────────────────
 // START SERVER
