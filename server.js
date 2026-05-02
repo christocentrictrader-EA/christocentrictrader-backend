@@ -96,13 +96,6 @@ const upload = multer({
 // ─────────────────────────────────────────────
 // TELEGRAM HELPERS
 // ─────────────────────────────────────────────
-async function tgSend(text) {
-  const url  = `https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage`;
-  const body = JSON.stringify({ chat_id: TG_CHAT_ID, text, parse_mode: 'HTML' });
-  const res = await fetch(url, { method: 'POST', headers: { 'Content-Type':'application/json' }, body });
-  if (!res.ok) console.error('Telegram sendMessage failed:', await res.text());
-  return res.ok;
-}
 async function tgSendFile(filePath, caption) {
   const ext = path.extname(filePath).toLowerCase();
   const isPhoto = ['.jpg','.jpeg','.png','.webp'].includes(ext);
@@ -113,7 +106,7 @@ async function tgSendFile(filePath, caption) {
   const form = new FormData();
   form.append('chat_id', TG_CHAT_ID);
   form.append('caption', caption);
-  form.append('parse_mode', 'HTML');
+  form.append('parse_mode', 'HTML'); // enables bold formatting
   const fileBuffer = fs.readFileSync(filePath);
   form.append(field, new Blob([fileBuffer]), path.basename(filePath));
   const res = await fetch(url, { method:'POST', body:form });
@@ -141,8 +134,15 @@ app.post('/api/submit-account', accountLimiter, async (req,res)=>{
     if (!isValidMT5(mt5Account)) return res.status(400).json({ok:false,error:'Invalid MT5 account'});
     if (!tier) return res.status(400).json({ok:false,error:'Tier required'});
     const tierLabel = { tier1:'Tier 1 — Classic EA ($50/month)', tier2:'Tier 2 — Advanced ($100/month)', tier3:'Tier 3 — Full Suite ($150/month)' }[tier] || tier;
-    const msg = `🔑 <b>NEW LICENSE REQUEST</b>\n👤 ${sanitize(name)}\n📧 ${sanitize(email)}\n🖥 ${sanitize(mt5Account)}\n🏦 ${sanitize(broker||'Not provided')}\n🎯 ${tierLabel}\n${message?`💬 ${sanitize(message)}`:''}\n⏰ ${new Date().toUTCString()}`;
-    await tgSend(msg);
+    const msg = `🔑 <b>NEW LICENSE REQUEST</b>\n
+<b>Full Name:</b> ${sanitize(name)}\n
+<b>Email Address:</b> ${sanitize(email)}\n
+<b>MT5 Account:</b> ${sanitize(mt5Account)}\n
+<b>Broker:</b> ${sanitize(broker||'Not provided')}\n
+<b>Tier:</b> ${tierLabel}\n
+${message?`💬 ${sanitize(message)}`:''}\n
+⏰ ${new Date().toUTCString()}`;
+    await tgSendFile(null, msg); // text-only message
     res.json({ok:true,message:'Submitted successfully'});
   } catch(err) {
     console.error('[account] error:',err);
@@ -160,8 +160,16 @@ app.post('/api/payment-proof', uploadLimiter, upload.single('paymentProof'), asy
     if (!method) return res.status(400).json({ok:false,error:'Payment method required'});
     if (!amount?.trim()) return res.status(400).json({ok:false,error:'Amount required'});
     if (!file) return res.status(400).json({ok:false,error:'Payment proof file required'});
-    const caption = `💰 <b>PAYMENT PROOF RECEIVED</b>\n👤 ${sanitize(name)}\n📧 ${sanitize(email)}\n🖥 ${sanitize(mt5Account)}\n💳 ${sanitize(method)}\n💵 ${sanitize(amount)}\n⏰ ${new Date().toUTCString()}`;
-    await tgSend(caption);
+
+    // Bold labels with HTML formatting
+    const caption = `💰 <b>PAYMENT PROOF RECEIVED</b>\n
+<b>Full Name:</b> ${sanitize(name)}\n
+<b>Email Address:</b> ${sanitize(email)}\n
+<b>MT5 Account Number:</b> ${sanitize(mt5Account)}\n
+<b>Payment Method:</b> ${sanitize(method)}\n
+<b>Amount Paid:</b> ₦${sanitize(amount)}\n
+<b>Timestamp:</b> ${new Date().toUTCString()}`;
+
     await tgSendFile(file.path, caption);
     res.json({ok:true,message:'Payment proof submitted successfully'});
   } catch(err) {
