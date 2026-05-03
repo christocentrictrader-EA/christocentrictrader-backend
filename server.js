@@ -48,11 +48,16 @@ app.use(helmet({ contentSecurityPolicy: false }));
 app.use(cors({
   origin: (origin, cb) => {
     const allowed = [
+      'https://christocentrictrader-frontend.onrender.com',
+      'https://christocentrictrader-backend.onrender.com',
       'https://christocentrictrader.d9thprofithub.com.ng',
-      'https://christocentrictrader-backend.onrender.com'
+      'https://api.christocentrictrader.d9thprofithub.com.ng'
     ];
-    if (!origin || allowed.includes(origin)) cb(null, true);
-    else cb(new Error('Not allowed by CORS'));
+    if (!origin || allowed.includes(origin)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Not allowed by CORS'));
+    }
   },
   methods: ['GET','POST'],
 }));
