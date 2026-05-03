@@ -134,7 +134,7 @@ const sanitize     = v => String(v||'').replace(/[<>]/g,'');
 // ROUTES
 // ─────────────────────────────────────────────
 app.get('/api/health', (req,res)=>res.json({ok:true}));
-─
+
 // Account submission route─
 app.post('/api/submit-account', async (req, res) => {
   try {
