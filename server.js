@@ -135,7 +135,9 @@ const sanitize     = v => String(v||'').replace(/[<>]/g,'');
 // ─────────────────────────────────────────────
 app.get('/api/health', (req,res)=>res.json({ok:true}));
 
-// Account submission route─
+const axios = require('axios');
+
+// Account submission route
 app.post('/api/submit-account', async (req, res) => {
   try {
     const { name, email, mt5Account, broker, tier, message } = req.body;
@@ -161,10 +163,10 @@ Additional Notes: ${message && message.trim() ? message : '—'}
 
     res.json({ ok: true });
   } catch (err) {
-    console.error(err);
+    console.error('Telegram send error:', err.response ? err.response.data : err.message);
     res.status(500).json({ ok: false, error: 'Failed to submit account' });
   }
-});;
+});
 
 // PAYMENT PROOF
 app.post('/api/payment-proof', uploadLimiter, upload.single('paymentProof'), async (req,res)=>{
