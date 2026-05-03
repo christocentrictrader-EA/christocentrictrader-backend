@@ -227,11 +227,9 @@ app.use((err, req, res, next) => {
 // ─────────────────────────────────────────────
 // START SERVER
 // ─────────────────────────────────────────────
-const PORT = process.env.PORT || 3000;
-
 app.listen(PORT, () => {
   console.log(`ChristocentricTrader backend running on port ${PORT}`);
   console.log(`  Environment : ${NODE_ENV}`);
   console.log(`  Downloads   : ${DOWNLOADS_DIR}`);
   console.log(`  Uploads     : ${UPLOADS_DIR}`);
-});
+});0
