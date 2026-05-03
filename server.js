@@ -157,7 +157,7 @@ Additional Notes: ${message && message.trim() ? message : '—'}
 
     // Send to Telegram
     await axios.post(`https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
-      chat_id: process.env.TELEGRAM_CHAT_ID,
+      chat_id: process.env.TG_CHAT_ID,
       text
     });
 
