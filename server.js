@@ -167,7 +167,7 @@ app.post('/api/payment-proof', uploadLimiter, upload.single('paymentProof'), asy
 <b>Email Address:</b> ${sanitize(email)}\n
 <b>MT5 Account Number:</b> ${sanitize(mt5Account)}\n
 <b>Payment Method:</b> ${sanitize(method)}\n
-<b>Amount Paid:</b> ₦${sanitize(amount)}\n
+<b>Amount Paid:</b> ${sanitize(amount)}\n
 <b>Timestamp:</b> ${new Date().toUTCString()}`;
 
     await tgSendFile(file.path, caption);
