@@ -49,7 +49,7 @@ app.use(cors({
   origin: (origin, cb) => {
     const allowed = [
       'https://christocentrictrader.d9thprofithub.com.ng',
-      'https://api.christocentrictrader.d9thprofithub.com.ng'
+      'https://christocentrictrader-backend.onrender.com'
     ];
     if (!origin || allowed.includes(origin)) cb(null, true);
     else cb(new Error('Not allowed by CORS'));
