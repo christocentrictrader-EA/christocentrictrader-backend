@@ -134,43 +134,37 @@ const sanitize     = v => String(v||'').replace(/[<>]/g,'');
 // ROUTES
 // ─────────────────────────────────────────────
 app.get('/api/health', (req,res)=>res.json({ok:true}));
-
-// ACCOUNT SUBMISSION
-app.post('/api/submit-account', accountLimiter, async (req,res)=>{
+─
+// Account submission route─
+app.post('/api/submit-account', async (req, res) => {
   try {
-    const { name, email, mt5Account, broker, tier, notes } = req.body;
+    const { name, email, mt5Account, broker, tier, message } = req.body;
 
-    // Validation
-    if (!name?.trim()) return res.status(400).json({ok:false,error:'Full Name required'});
-    if (!isValidEmail(email)) return res.status(400).json({ok:false,error:'Invalid Email Address'});
-    if (!isValidMT5(mt5Account)) return res.status(400).json({ok:false,error:'Invalid MT5 Account Number'});
-    if (!broker?.trim()) return res.status(400).json({ok:false,error:'Broker Name required'});
-    if (!tier?.trim()) return res.status(400).json({ok:false,error:'License Tier required'});
+    const text = `
+🔑 NEW LICENSE REQUEST
 
-    // Tier labels
-    const tierLabel = {
-      tier1: 'Tier 1 — Classic EA ($50/month)',
-      tier2: 'Tier 2 — Advanced ($100/month)',
-      tier3: 'Tier 3 — Full Suite ($150/month)'
-    }[tier] || tier;
+Full Name: ${name}
+Email Address: ${email}
+MT5 Account Number: ${mt5Account}
+Broker Name: ${broker}
+License Tier: ${tier}
+Additional Notes: ${message && message.trim() ? message : '—'}
 
-    // Telegram message with improved formatting
-    const msg = `🔑 <b>NEW LICENSE REQUEST</b>\n\n
-<b>Full Name:</b> ${sanitize(name)}\n
-<b>Email Address:</b> ${sanitize(email)}\n
-<b>MT5 Account Number:</b> ${sanitize(mt5Account)}\n
-<b>Broker Name:</b> ${sanitize(broker)}\n
-<b>License Tier:</b> ${tierLabel}\n
-${notes ? `<b>Additional Notes:</b> ${sanitize(notes)}\n` : ''}
-⏰ <b>Submitted At:</b> ${new Date().toUTCString()}`;
+⏰ Submitted At: ${new Date().toUTCString()}
+`;
 
-    await tgSendFile(null, msg); // text-only message
-    res.json({ok:true,message:'Account submitted successfully'});
-  } catch(err) {
-    console.error('[account] error:',err);
-    res.status(500).json({ok:false,error:'Server error'});
+    // Send to Telegram
+    await axios.post(`https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
+      chat_id: process.env.TELEGRAM_CHAT_ID,
+      text
+    });
+
+    res.json({ ok: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ ok: false, error: 'Failed to submit account' });
   }
-});
+});;
 
 // PAYMENT PROOF
 app.post('/api/payment-proof', uploadLimiter, upload.single('paymentProof'), async (req,res)=>{
