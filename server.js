@@ -113,7 +113,8 @@ app.post('/api/ask-ai', async (req, res) => {
     );
 
     const answer = response.data[0]?.generated_text || "No answer generated.";
-    res.json({ answer });
+    console.log(`Model used: ${modelName}`);
+    res.json({ answer, model: modelName });
   } catch (err) {
     if (err.response) {
       console.error("AI error response:", err.response.status, err.response.data);
@@ -139,8 +140,9 @@ app.post('/api/upload', upload.single('file'), (req, res) => {
   res.json({ ok: true, file: req.file.filename });
 });
 
-// Start server
-const PORT = process.env.PORT || 5000;
+// ✅ Correct port binding for Render
+const PORT = process.env.PORT;
 app.listen(PORT, () => {
   console.log(`ChristocentricTrader backend running on port ${PORT}`);
-});
+});	
+
