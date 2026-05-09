@@ -15,6 +15,9 @@ const axios      = require('axios');
 
 const app = express();
 
+// ✅ Trust Render proxy so rate-limit works correctly
+app.set('trust proxy', 1);
+
 // Security & middleware
 app.use(cors());
 app.use(helmet());
@@ -90,7 +93,8 @@ Amount Paid: ${amount}
     res.status(500).json({ ok: false, error: 'Failed to submit payment proof' });
   }
 });
-// AI Chat Route (simulated streaming)
+
+// AI Chat Route (with detailed error logging)
 app.post('/api/ask-ai', async (req, res) => {
   try {
     const { question } = req.body;
@@ -104,12 +108,17 @@ app.post('/api/ask-ai', async (req, res) => {
     const answer = response.data[0].generated_text;
     res.json({ answer });
   } catch (err) {
-    console.error('AI error:', err.response ? err.response.data : err.message);
-    res.status(500).json({ error: 'AI request failed' });
+    // ✅ Log Hugging Face’s raw error response for debugging
+    if (err.response) {
+      console.error('AI error response:', err.response.status, err.response.data);
+    } else {
+      console.error('AI error:', err.message);
+    }
+    res.status(500).json({ error: 'AI request failed', details: err.response ? err.response.data : err.message });
   }
 });
 
-// Example upload route (if you already have one)
+// Example upload route
 app.post('/api/upload', upload.single('file'), (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
   res.json({ ok: true, file: req.file.filename });
