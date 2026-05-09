@@ -1,3 +1,8 @@
+/**
+ * ChristocentricTrader Backend — server.js
+ * Node.js + Express
+ */
+
 require('dotenv').config();
 const express    = require('express');
 const multer     = require('multer');
@@ -20,49 +25,72 @@ const upload = multer({ dest: 'uploads/' });
 // === Routes ===
 
 // Account submission
-app.post('/api/submit-account', async (req, res) => { /* unchanged */ });
+app.post('/api/submit-account', async (req, res) => {
+  try {
+    const { name, email, mt5Account, broker, tier, message } = req.body;
+
+    const text = `
+🔑 NEW LICENSE REQUEST
+
+Full Name: ${name}
+Email Address: ${email}
+MT5 Account Number: ${mt5Account}
+Broker Name: ${broker}
+License Tier: ${tier}
+Additional Notes: ${message && message.trim() ? message : '—'}
+
+⏰ Submitted At: ${new Date().toUTCString()}
+`;
+
+    await axios.post(`https://api.telegram.org/bot${process.env.TG_BOT_TOKEN}/sendMessage`, {
+      chat_id: process.env.TG_CHAT_ID,
+      text
+    });
+
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('Telegram send error:', err.response ? err.response.data : err.message);
+    res.status(500).json({ ok: false, error: 'Failed to submit account' });
+  }
+});
 
 // Payment proof
-app.post('/api/payment-proof', async (req, res) => { /* unchanged */ });
-
-// AI Chat Route
-app.post('/api/ask-ai', async (req, res) => {
+app.post('/api/payment-proof', async (req, res) => {
   try {
-    const { question } = req.body;
-    const modelName = process.env.MODEL_NAME || "google/flan-t5-small";
-    const url = `https://api-inference.huggingface.co/models/${modelName}`;
+    const { name, email, mt5Account, method, amount } = req.body;
 
-    const response = await axios.post(
-      url,
-      { inputs: question },
-      {
-        headers: {
-          Authorization: `Bearer ${process.env.HF_API_TOKEN}`,
-          "Content-Type": "application/json"
-        }
-      }
-    );
+    const text = `
+💰 PAYMENT PROOF RECEIVED
 
-    const answer = response.data[0]?.generated_text || response.data?.generated_text || "No answer generated.";
-    console.log(`Model used: ${modelName}`);
-    res.json({ answer, model: modelName });
+Full Name: ${name}
+Email Address: ${email}
+MT5 Account Number: ${mt5Account}
+Payment Method: ${method}
+Amount Paid: ${amount}
+
+⏰ Submitted At: ${new Date().toUTCString()}
+`;
+
+    await axios.post(`https://api.telegram.org/bot${process.env.TG_BOT_TOKEN}/sendMessage`, {
+      chat_id: process.env.TG_CHAT_ID,
+      text
+    });
+
+    res.json({ ok: true });
   } catch (err) {
-    if (err.response) {
-      console.error("AI error response:", err.response.status, err.response.data);
-      res.status(err.response.status).json({
-        error: "AI request failed",
-        details: err.response.data,
-        fallback: "AI is busy or model not found, please try again later."
-      });
-    } else {
-      console.error("AI error:", err.message);
-      res.status(500).json({
-        error: "AI request failed",
-        details: err.message,
-        fallback: "AI is busy right now, please try again later."
-      });
-    }
+    console.error('Telegram send error:', err.response ? err.response.data : err.message);
+    res.status(500).json({ ok: false, error: 'Failed to submit payment proof' });
   }
+});
+
+// AI Chat Route (placeholder response)
+app.post('/api/ask-ai', async (req, res) => {
+  const { question } = req.body;
+
+  res.json({
+    answer: "Our AI trading assistant is not available right now. Stay tuned for future updates!",
+    model: "placeholder"
+  });
 });
 
 // Upload route
