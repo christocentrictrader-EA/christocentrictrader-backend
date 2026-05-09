@@ -24,27 +24,31 @@ const upload = multer({ dest: 'uploads/' });
 
 // === Routes ===
 
-// Account submission
+// License / Account submission
 app.post('/api/submit-account', async (req, res) => {
   try {
     const { name, email, mt5Account, broker, tier, message } = req.body;
 
     const text = `
-🔑 NEW LICENSE REQUEST
+🔑 *NEW LICENSE REQUEST*
 
-Full Name: ${name}
-Email Address: ${email}
-MT5 Account Number: ${mt5Account}
-Broker Name: ${broker}
-License Tier: ${tier}
-Additional Notes: ${message && message.trim() ? message : '—'}
+👤 Name: ${name}
+📧 Email: ${email}
+🔑 MT5 Account: ${mt5Account}
+🏦 Broker: ${broker}
+🎟️ Tier: ${tier}
+📝 Notes: ${message && message.trim() ? message : '—'}
 
 ⏰ Submitted At: ${new Date().toUTCString()}
+
+━━━━━━━━━━━━━━━
+📌 License request logged successfully!
 `;
 
     await axios.post(`https://api.telegram.org/bot${process.env.TG_BOT_TOKEN}/sendMessage`, {
       chat_id: process.env.TG_CHAT_ID,
-      text
+      text,
+      parse_mode: "Markdown"
     });
 
     res.json({ ok: true });
@@ -60,20 +64,24 @@ app.post('/api/payment-proof', async (req, res) => {
     const { name, email, mt5Account, method, amount } = req.body;
 
     const text = `
-💰 PAYMENT PROOF RECEIVED
+💰 *PAYMENT PROOF RECEIVED*
 
-Full Name: ${name}
-Email Address: ${email}
-MT5 Account Number: ${mt5Account}
-Payment Method: ${method}
-Amount Paid: ${amount}
+👤 Name: ${name}
+📧 Email: ${email}
+🔑 MT5 Account: ${mt5Account}
+🏦 Method: ${method}
+💵 Amount: ${amount}
 
 ⏰ Submitted At: ${new Date().toUTCString()}
+
+━━━━━━━━━━━━━━━
+✅ Payment confirmation logged successfully!
 `;
 
     await axios.post(`https://api.telegram.org/bot${process.env.TG_BOT_TOKEN}/sendMessage`, {
       chat_id: process.env.TG_CHAT_ID,
-      text
+      text,
+      parse_mode: "Markdown"
     });
 
     res.json({ ok: true });
@@ -88,9 +96,42 @@ app.post('/api/ask-ai', async (req, res) => {
   const { question } = req.body;
 
   res.json({
-    answer: "Our AI trading assistant is not available right now. Stay tuned for future updates!",
+    answer: "🚀 AI Trading Assistant coming soon — stay tuned!",
     model: "placeholder"
   });
+});
+
+// Email subscription route
+app.post('/api/subscribe', async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email || !email.includes('@')) {
+      return res.status(400).json({ ok: false, error: 'Invalid email address' });
+    }
+
+    const text = `
+📩 *NEW SUBSCRIPTION REQUEST*
+
+👤 Email: ${email}
+
+⏰ Submitted At: ${new Date().toUTCString()}
+
+━━━━━━━━━━━━━━━
+✨ Stay tuned — another trader wants AI updates!
+`;
+
+    await axios.post(`https://api.telegram.org/bot${process.env.TG_BOT_TOKEN}/sendMessage`, {
+      chat_id: process.env.TG_CHAT_ID,
+      text,
+      parse_mode: "Markdown"
+    });
+
+    res.json({ ok: true, message: 'Subscription saved successfully' });
+  } catch (err) {
+    console.error('Subscription error:', err.response ? err.response.data : err.message);
+    res.status(500).json({ ok: false, error: 'Failed to save subscription' });
+  }
 });
 
 // Upload route
