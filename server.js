@@ -6,8 +6,6 @@
 require('dotenv').config();
 const express    = require('express');
 const multer     = require('multer');
-const path       = require('path');
-const fs         = require('fs');
 const cors       = require('cors');
 const helmet     = require('helmet');
 const rateLimit  = require('express-rate-limit');
@@ -94,27 +92,31 @@ Amount Paid: ${amount}
   }
 });
 
-// AI Chat Route (with detailed error logging)
+// AI Chat Route (using smaller model + detailed error logging)
 app.post('/api/ask-ai', async (req, res) => {
   try {
     const { question } = req.body;
 
     const response = await axios.post(
-      'https://api-inference.huggingface.co/models/tiiuae/falcon-7b-instruct',
+      'https://api-inference.huggingface.co/models/google/flan-t5-base',
       { inputs: `You are a trading assistant. Answer clearly:\n${question}` },
       { headers: { Authorization: `Bearer ${process.env.HF_API_TOKEN}` } }
     );
 
-    const answer = response.data[0].generated_text;
+    const answer = response.data[0]?.generated_text || "No answer generated.";
     res.json({ answer });
   } catch (err) {
-    // ✅ Log Hugging Face’s raw error response for debugging
     if (err.response) {
       console.error('AI error response:', err.response.status, err.response.data);
     } else {
       console.error('AI error:', err.message);
     }
-    res.status(500).json({ error: 'AI request failed', details: err.response ? err.response.data : err.message });
+    // ✅ Friendly fallback message
+    res.status(500).json({
+      error: 'AI request failed',
+      details: err.response ? err.response.data : err.message,
+      fallback: 'AI is busy right now, please try again in a moment.'
+    });
   }
 });
 
