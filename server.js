@@ -11,133 +11,28 @@ const fs         = require('fs');
 const cors       = require('cors');
 const helmet     = require('helmet');
 const rateLimit  = require('express-rate-limit');
+const axios      = require('axios');
 
 const app = express();
-app.set('trust proxy', 1); // fix proxy header issue on Render
 
-// Dynamic import wrapper for node-fetch
-const fetch = (...args) =>
-  import('node-fetch').then(({ default: f }) => f(...args));
+// Security & middleware
+app.use(cors());
+app.use(helmet());
+app.use(express.json());
 
-// ─────────────────────────────────────────────
-// CONFIGURATION
-// ─────────────────────────────────────────────
-const {
-  PORT            = 3000,
-  TG_BOT_TOKEN,
-  TG_CHAT_ID,
-  DOWNLOADS_DIR   = path.join(__dirname, '../downloads'),
-  UPLOADS_DIR     = path.join(__dirname, 'uploads'),
-  NODE_ENV        = 'production',
-} = process.env;
-
-if (!TG_BOT_TOKEN || !TG_CHAT_ID) {
-  console.error('ERROR: TG_BOT_TOKEN and TG_CHAT_ID must be set');
-  process.exit(1);
-}
-
-// Ensure directories exist
-[DOWNLOADS_DIR, UPLOADS_DIR].forEach(dir => {
-  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+// Rate limiter
+const limiter = rateLimit({
+  windowMs: 1 * 60 * 1000, // 1 minute
+  max: 60, // limit each IP to 60 requests per minute
 });
+app.use(limiter);
 
-// ─────────────────────────────────────────────
-// SECURITY + CORS
-// ─────────────────────────────────────────────
-app.use(helmet({ contentSecurityPolicy: false }));
-app.use(cors({
-  origin: (origin, cb) => {
-    const allowed = [
-      'https://christocentrictrader-frontend.onrender.com',
-      'https://christocentrictrader-backend.onrender.com',
-      'https://christocentrictrader.d9thprofithub.com.ng',
-      'https://api.christocentrictrader.d9thprofithub.com.ng'
-    ];
-    if (!origin || allowed.includes(origin)) {
-      cb(null, true);
-    } else {
-      cb(new Error('Not allowed by CORS'));
-    }
-  },
-  methods: ['GET','POST'],
-}));
-app.use(express.json({ limit: '1mb' }));
-app.use(express.urlencoded({ extended: true, limit: '1mb' }));
+// File upload setup
+const upload = multer({ dest: 'uploads/' });
 
-// ─────────────────────────────────────────────
-// RATE LIMITING
-// ─────────────────────────────────────────────
-const accountLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 200,
-  message: { ok: false, error: 'Too many account submissions, try later.' },
-});
-const uploadLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 50,
-  message: { ok: false, error: 'Too many uploads, try later.' },
-});
+// === Existing Routes ===
 
-// ─────────────────────────────────────────────
-// MULTER CONFIG
-// ─────────────────────────────────────────────
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, UPLOADS_DIR),
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname).toLowerCase();
-    cb(null, Date.now() + '_' + Math.random().toString(36).substring(2) + ext);
-  }
-});
-const ALLOWED_MIME = ['image/jpeg','image/png','image/webp','application/pdf'];
-const upload = multer({
-  storage,
-  limits: { fileSize: 5 * 1024 * 1024 },
-  fileFilter: (req, file, cb) => {
-    if (ALLOWED_MIME.includes(file.mimetype)) cb(null, true);
-    else cb(new Error('Only JPG, PNG, WebP, or PDF files are allowed'));
-  }
-});
-
-// ─────────────────────────────────────────────
-// TELEGRAM HELPERS
-// ─────────────────────────────────────────────
-async function tgSendFile(filePath, caption) {
-  const ext = filePath ? path.extname(filePath).toLowerCase() : null;
-  const isPhoto = ext && ['.jpg','.jpeg','.png','.webp'].includes(ext);
-  const endpoint = filePath ? (isPhoto ? 'sendPhoto' : 'sendDocument') : 'sendMessage';
-  const field = isPhoto ? 'photo' : 'document';
-  const url = `https://api.telegram.org/bot${TG_BOT_TOKEN}/${endpoint}`;
-  const { FormData, Blob } = await import('node-fetch').then(m => ({ FormData:m.FormData, Blob:m.Blob }));
-  const form = new FormData();
-  form.append('chat_id', TG_CHAT_ID);
-  form.append('parse_mode', 'HTML');
-  if (filePath) {
-    form.append('caption', caption);
-    const fileBuffer = fs.readFileSync(filePath);
-    form.append(field, new Blob([fileBuffer]), path.basename(filePath));
-  } else {
-    form.append('text', caption);
-  }
-  const res = await fetch(url, { method:'POST', body:form });
-  if (!res.ok) console.error(`Telegram ${endpoint} failed:`, await res.text());
-  return res.ok;
-}
-
-// ─────────────────────────────────────────────
-// VALIDATION HELPERS
-// ─────────────────────────────────────────────
-const isValidMT5   = v => /^[0-9]{5,12}$/.test((v||'').trim());
-const isValidEmail = v => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test((v||'').trim());
-const sanitize     = v => String(v||'').replace(/[<>]/g,'');
-
-// ─────────────────────────────────────────────
-// ROUTES
-// ─────────────────────────────────────────────
-app.get('/api/health', (req,res)=>res.json({ok:true}));
-
-const axios = require('axios');
-
-// Account submission route
+// Account submission
 app.post('/api/submit-account', async (req, res) => {
   try {
     const { name, email, mt5Account, broker, tier, message } = req.body;
@@ -155,7 +50,6 @@ Additional Notes: ${message && message.trim() ? message : '—'}
 ⏰ Submitted At: ${new Date().toUTCString()}
 `;
 
-    // Send to Telegram
     await axios.post(`https://api.telegram.org/bot${process.env.TG_BOT_TOKEN}/sendMessage`, {
       chat_id: process.env.TG_CHAT_ID,
       text
@@ -168,69 +62,61 @@ Additional Notes: ${message && message.trim() ? message : '—'}
   }
 });
 
-// PAYMENT PROOF
-app.post('/api/payment-proof', uploadLimiter, upload.single('paymentProof'), async (req,res)=>{
+// Payment proof
+app.post('/api/payment-proof', async (req, res) => {
   try {
-    const { name,email,mt5Account,method,amount } = req.body;
-    const file = req.file;
+    const { name, email, mt5Account, method, amount } = req.body;
 
-    // Validation
-    if (!name?.trim()) return res.status(400).json({ok:false,error:'Full Name required'});
-    if (!isValidEmail(email)) return res.status(400).json({ok:false,error:'Invalid Email Address'});
-    if (!isValidMT5(mt5Account)) return res.status(400).json({ok:false,error:'Invalid MT5 Account Number'});
-    if (!method?.trim()) return res.status(400).json({ok:false,error:'Payment Method required'});
-    if (!amount?.trim()) return res.status(400).json({ok:false,error:'Amount Paid required'});
-    if (!file) return res.status(400).json({ok:false,error:'Payment proof file required'});
+    const text = `
+💰 PAYMENT PROOF RECEIVED
 
-    // Telegram caption with improved formatting
-    const caption = `💰 <b>PAYMENT PROOF RECEIVED</b>\n\n
-<b>Full Name:</b> ${sanitize(name)}\n
-<b>Email Address:</b> ${sanitize(email)}\n
-<b>MT5 Account Number:</b> ${sanitize(mt5Account)}\n
-<b>Payment Method:</b> ${sanitize(method)}\n
-<b>Amount Paid:</b> ${sanitize(amount)}\n
-⏰ <b>Submitted At:</b> ${new Date().toUTCString()}`;
+Full Name: ${name}
+Email Address: ${email}
+MT5 Account Number: ${mt5Account}
+Payment Method: ${method}
+Amount Paid: ${amount}
 
-    await tgSendFile(file.path, caption);
-    res.json({ok:true,message:'Payment proof submitted successfully'});
-  } catch(err) {
-    console.error('[payment] error:',err);
-    if (err.code==='LIMIT_FILE_SIZE') return res.status(400).json({ok:false,error:'File too large. Max 5MB.'});
-    if (err.message?.includes('Only')) return res.status(400).json({ok:false,error:err.message});
-    res.status(500).json({ok:false,error:'Server error'});
+⏰ Submitted At: ${new Date().toUTCString()}
+`;
+
+    await axios.post(`https://api.telegram.org/bot${process.env.TG_BOT_TOKEN}/sendMessage`, {
+      chat_id: process.env.TG_CHAT_ID,
+      text
+    });
+
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('Telegram send error:', err.response ? err.response.data : err.message);
+    res.status(500).json({ ok: false, error: 'Failed to submit payment proof' });
+  }
+});
+// AI Chat Route (simulated streaming)
+app.post('/api/ask-ai', async (req, res) => {
+  try {
+    const { question } = req.body;
+
+    const response = await axios.post(
+      'https://api-inference.huggingface.co/models/tiiuae/falcon-7b-instruct',
+      { inputs: `You are a trading assistant. Answer clearly:\n${question}` },
+      { headers: { Authorization: `Bearer ${process.env.HF_API_TOKEN}` } }
+    );
+
+    const answer = response.data[0].generated_text;
+    res.json({ answer });
+  } catch (err) {
+    console.error('AI error:', err.response ? err.response.data : err.message);
+    res.status(500).json({ error: 'AI request failed' });
   }
 });
 
-// DOWNLOADS
-app.get('/downloads/:filename', (req, res) => {
-  const filename = path.basename(req.params.filename);
-
-  if (!filename.endsWith('.ex5')) {
-    return res.status(403).json({ error: 'Forbidden. Only .ex5 files allowed.' });
-  }
-
-  const filePath = path.join(DOWNLOADS_DIR, filename);
-  if (!fs.existsSync(filePath)) {
-    return res.status(404).json({ error: 'File not found.' });
-  }
-
-  res.download(filePath, filename);
+// Example upload route (if you already have one)
+app.post('/api/upload', upload.single('file'), (req, res) => {
+  if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+  res.json({ ok: true, file: req.file.filename });
 });
 
-// ─────────────────────────────────────────────
-// ERROR HANDLER
-// ─────────────────────────────────────────────
-app.use((err, req, res, next) => {
-  console.error('Unhandled error:', err.message);
-  res.status(500).json({ error: 'Internal Server Error', details: err.message });
-});
-
-// ─────────────────────────────────────────────
-// START SERVER
-// ─────────────────────────────────────────────
+// Start server
+const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`ChristocentricTrader backend running on port ${PORT}`);
-  console.log(`  Environment : ${NODE_ENV}`);
-  console.log(`  Downloads   : ${DOWNLOADS_DIR}`);
-  console.log(`  Uploads     : ${UPLOADS_DIR}`);
-});0
+});
