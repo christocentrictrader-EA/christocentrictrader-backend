@@ -92,34 +92,42 @@ Amount Paid: ${amount}
   }
 });
 
-// AI Chat Route (using flan-t5-small + detailed error logging)
+// AI Chat Route (dynamic model selection)
 app.post('/api/ask-ai', async (req, res) => {
   try {
     const { question } = req.body;
 
+    // ✅ Use environment variable MODEL_NAME, default to flan-t5-small
+    const modelName = process.env.MODEL_NAME || "google/flan-t5-small";
+    const url = `https://api-inference.huggingface.co/models/${modelName}`;
+
     const response = await axios.post(
-      'https://api-inference.huggingface.co/models/google/flan-t5-small',
+      url,
       { inputs: `You are a trading assistant. Answer clearly:\n${question}` },
-      { headers: { Authorization: `Bearer ${process.env.HF_API_TOKEN}` } }
+      {
+        headers: {
+          Authorization: `Bearer ${process.env.HF_API_TOKEN}`,
+          "Content-Type": "application/json"
+        }
+      }
     );
 
-    // Hugging Face returns an array of outputs
     const answer = response.data[0]?.generated_text || "No answer generated.";
     res.json({ answer });
   } catch (err) {
     if (err.response) {
-      console.error('AI error response:', err.response.status, err.response.data);
+      console.error("AI error response:", err.response.status, err.response.data);
       res.status(err.response.status).json({
-        error: 'AI request failed',
+        error: "AI request failed",
         details: err.response.data,
-        fallback: 'AI is busy or model not found, please try again later.'
+        fallback: "AI is busy or model not found, please try again later."
       });
     } else {
-      console.error('AI error:', err.message);
+      console.error("AI error:", err.message);
       res.status(500).json({
-        error: 'AI request failed',
+        error: "AI request failed",
         details: err.message,
-        fallback: 'AI is busy right now, please try again later.'
+        fallback: "AI is busy right now, please try again later."
       });
     }
   }
