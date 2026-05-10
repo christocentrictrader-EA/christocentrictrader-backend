@@ -32,15 +32,15 @@ app.post('/api/submit-account', async (req, res) => {
     const { name, email, mt5Account, broker, tier, message } = req.body;
 
     const text = `
-🔑 <b>NEW LICENSE REQUEST</b><br><br>
-👤 Name: ${name}<br>
-📧 Email: ${email}<br>
-🔑 MT5 Account: ${mt5Account}<br>
-🏦 Broker: ${broker}<br>
-🎟️ Tier: ${tier}<br>
-📝 Notes: ${message && message.trim() ? message : '—'}<br><br>
-⏰ Submitted At: ${new Date().toUTCString()}<br><br>
-━━━━━━━━━━━━━━━<br>
+🔑 <b>NEW LICENSE REQUEST</b>\n\n
+👤 Name: ${name}\n
+📧 Email: ${email}\n
+🔑 MT5 Account: ${mt5Account}\n
+🏦 Broker: ${broker}\n
+🎟️ Tier: ${tier}\n
+📝 Notes: ${message && message.trim() ? message : '—'}\n\n
+⏰ Submitted At: ${new Date().toUTCString()}\n\n
+━━━━━━━━━━━━━━━\n
 📌 License request logged successfully!
 `;
 
@@ -66,14 +66,14 @@ app.post('/api/payment-proof', upload.single('paymentProof'), async (req, res) =
     const { name, email, mt5Account, method, amount } = req.body;
 
     const text = `
-💰 <b>PAYMENT PROOF RECEIVED</b><br><br>
-👤 Name: ${name}<br>
-📧 Email: ${email}<br>
-🔑 MT5 Account: ${mt5Account}<br>
-🏦 Method: ${method}<br>
-💵 Amount: ${amount}<br><br>
-⏰ Submitted At: ${new Date().toUTCString()}<br><br>
-━━━━━━━━━━━━━━━<br>
+💰 <b>PAYMENT PROOF RECEIVED</b>\n\n
+👤 Name: ${name}\n
+📧 Email: ${email}\n
+🔑 MT5 Account: ${mt5Account}\n
+🏦 Method: ${method}\n
+💵 Amount: ${amount}\n\n
+⏰ Submitted At: ${new Date().toUTCString()}\n\n
+━━━━━━━━━━━━━━━\n
 ✅ Payment confirmation logged successfully!
 `;
 
@@ -132,10 +132,10 @@ app.post('/api/subscribe', async (req, res) => {
     }
 
     const text = `
-📩 <b>NEW SUBSCRIPTION REQUEST</b><br><br>
-👤 Email: ${email}<br><br>
-⏰ Submitted At: ${new Date().toUTCString()}<br><br>
-━━━━━━━━━━━━━━━<br>
+📩 <b>NEW SUBSCRIPTION REQUEST</b>\n\n
+👤 Email: ${email}\n\n
+⏰ Submitted At: ${new Date().toUTCString()}\n\n
+━━━━━━━━━━━━━━━\n
 ✨ Stay tuned — another trader wants AI updates!
 `;
 
