@@ -64,7 +64,7 @@ app.post('/api/submit-account', async (req, res) => {
 });
 
 // Payment proof (with file upload)
-app.post('/api/payment-proof', upload.single('file'), async (req, res) => {
+app.post('/api/payment-proof', upload.single('paymentProof'), async (req, res) => {
   try {
     const { name, email, mt5Account, method, amount } = req.body;
 
@@ -92,13 +92,20 @@ app.post('/api/payment-proof', upload.single('file'), async (req, res) => {
 
     // If a file was uploaded, send it too
     if (req.file) {
-      const formData = new FormData();
-      formData.append("chat_id", process.env.TG_CHAT_ID);
-      formData.append("document", fs.createReadStream(req.file.path));
+      try {
+        const formData = new FormData();
+        formData.append("chat_id", process.env.TG_CHAT_ID);
+        formData.append("document", fs.createReadStream(req.file.path));
 
-      await axios.post(`https://api.telegram.org/bot${process.env.TG_BOT_TOKEN}/sendDocument`, formData, {
-        headers: formData.getHeaders()
-      });
+        await axios.post(`https://api.telegram.org/bot${process.env.TG_BOT_TOKEN}/sendDocument`, formData, {
+          headers: formData.getHeaders()
+        });
+
+        // Clean up uploaded file after sending
+        fs.unlink(req.file.path, () => {});
+      } catch (fileErr) {
+        console.error("File upload to Telegram failed:", fileErr.message);
+      }
     }
 
     res.json({
@@ -106,7 +113,7 @@ app.post('/api/payment-proof', upload.single('file'), async (req, res) => {
       message: "Form submitted and proof uploaded successfully. Please click back to continue on the site."
     });
   } catch (err) {
-    console.error('Telegram send error:', err.response ? err.response.data : err.message);
+    console.error('Payment proof error:', err.response ? err.response.data : err.message);
     res.status(500).json({ ok: false, error: 'Failed to submit payment proof' });
   }
 });
@@ -158,13 +165,30 @@ app.post('/api/subscribe', async (req, res) => {
 });
 
 // Upload route
-app.post('/api/upload', upload.single('file'), (req, res) => {
+app.post('/api/upload', upload.single('file'), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
-  res.json({
-    ok: true,
-    file: req.file.filename,
-    message: "File uploaded successfully."
-  });
+
+  try {
+    const formData = new FormData();
+    formData.append("chat_id", process.env.TG_CHAT_ID);
+    formData.append("document", fs.createReadStream(req.file.path));
+
+    await axios.post(`https://api.telegram.org/bot${process.env.TG_BOT_TOKEN}/sendDocument`, formData, {
+      headers: formData.getHeaders()
+    });
+
+    // Clean up uploaded file after sending
+    fs.unlink(req.file.path, () => {});
+
+    res.json({
+      ok: true,
+      file: req.file.filename,
+      message: "File uploaded and forwarded successfully."
+    });
+  } catch (err) {
+    console.error("Upload route error:", err.response ? err.response.data : err.message);
+    res.status(500).json({ ok: false, error: 'Failed to upload file' });
+  }
 });
 
 // ✅ Correct port binding for Render
