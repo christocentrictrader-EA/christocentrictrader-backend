@@ -89,7 +89,10 @@ app.post('/api/payment-proof', upload.single('paymentProof'), async (req, res) =
       try {
         const formData = new FormData();
         formData.append("chat_id", process.env.TG_CHAT_ID);
-        formData.append("document", fs.createReadStream(req.file.path));
+        // ✅ Preserve original filename so Telegram shows correct extension
+        formData.append("document", fs.createReadStream(req.file.path), {
+          filename: req.file.originalname
+        });
 
         await axios.post(`https://api.telegram.org/bot${process.env.TG_BOT_TOKEN}/sendDocument`, formData, {
           headers: formData.getHeaders()
@@ -162,7 +165,10 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
   try {
     const formData = new FormData();
     formData.append("chat_id", process.env.TG_CHAT_ID);
-    formData.append("document", fs.createReadStream(req.file.path));
+    // ✅ Preserve original filename here too
+    formData.append("document", fs.createReadStream(req.file.path), {
+      filename: req.file.originalname
+    });
 
     await axios.post(`https://api.telegram.org/bot${process.env.TG_BOT_TOKEN}/sendDocument`, formData, {
       headers: formData.getHeaders()
@@ -173,7 +179,7 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
 
     res.json({
       ok: true,
-      file: req.file.filename,
+      file: req.file.originalname,
       message: "File uploaded and forwarded successfully."
     });
   } catch (err) {
