@@ -32,25 +32,22 @@ app.post('/api/submit-account', async (req, res) => {
     const { name, email, mt5Account, broker, tier, message } = req.body;
 
     const text = `
-🔑 *NEW LICENSE REQUEST*
-
-👤 Name: ${name}
-📧 Email: ${email}
-🔑 MT5 Account: ${mt5Account}
-🏦 Broker: ${broker}
-🎟️ Tier: ${tier}
-📝 Notes: ${message && message.trim() ? message : '—'}
-
-⏰ Submitted At: ${new Date().toUTCString()}
-
-━━━━━━━━━━━━━━━
+🔑 <b>NEW LICENSE REQUEST</b><br><br>
+👤 Name: ${name}<br>
+📧 Email: ${email}<br>
+🔑 MT5 Account: ${mt5Account}<br>
+🏦 Broker: ${broker}<br>
+🎟️ Tier: ${tier}<br>
+📝 Notes: ${message && message.trim() ? message : '—'}<br><br>
+⏰ Submitted At: ${new Date().toUTCString()}<br><br>
+━━━━━━━━━━━━━━━<br>
 📌 License request logged successfully!
 `;
 
     await axios.post(`https://api.telegram.org/bot${process.env.TG_BOT_TOKEN}/sendMessage`, {
       chat_id: process.env.TG_CHAT_ID,
       text,
-      parse_mode: "Markdown"
+      parse_mode: "HTML"
     });
 
     res.json({
@@ -69,17 +66,14 @@ app.post('/api/payment-proof', upload.single('paymentProof'), async (req, res) =
     const { name, email, mt5Account, method, amount } = req.body;
 
     const text = `
-💰 *PAYMENT PROOF RECEIVED*
-
-👤 Name: ${name}
-📧 Email: ${email}
-🔑 MT5 Account: ${mt5Account}
-🏦 Method: ${method}
-💵 Amount: ${amount}
-
-⏰ Submitted At: ${new Date().toUTCString()}
-
-━━━━━━━━━━━━━━━
+💰 <b>PAYMENT PROOF RECEIVED</b><br><br>
+👤 Name: ${name}<br>
+📧 Email: ${email}<br>
+🔑 MT5 Account: ${mt5Account}<br>
+🏦 Method: ${method}<br>
+💵 Amount: ${amount}<br><br>
+⏰ Submitted At: ${new Date().toUTCString()}<br><br>
+━━━━━━━━━━━━━━━<br>
 ✅ Payment confirmation logged successfully!
 `;
 
@@ -87,7 +81,7 @@ app.post('/api/payment-proof', upload.single('paymentProof'), async (req, res) =
     await axios.post(`https://api.telegram.org/bot${process.env.TG_BOT_TOKEN}/sendMessage`, {
       chat_id: process.env.TG_CHAT_ID,
       text,
-      parse_mode: "Markdown"
+      parse_mode: "HTML"
     });
 
     // If a file was uploaded, send it too
@@ -138,20 +132,17 @@ app.post('/api/subscribe', async (req, res) => {
     }
 
     const text = `
-📩 *NEW SUBSCRIPTION REQUEST*
-
-👤 Email: ${email}
-
-⏰ Submitted At: ${new Date().toUTCString()}
-
-━━━━━━━━━━━━━━━
+📩 <b>NEW SUBSCRIPTION REQUEST</b><br><br>
+👤 Email: ${email}<br><br>
+⏰ Submitted At: ${new Date().toUTCString()}<br><br>
+━━━━━━━━━━━━━━━<br>
 ✨ Stay tuned — another trader wants AI updates!
 `;
 
     await axios.post(`https://api.telegram.org/bot${process.env.TG_BOT_TOKEN}/sendMessage`, {
       chat_id: process.env.TG_CHAT_ID,
       text,
-      parse_mode: "Markdown"
+      parse_mode: "HTML"
     });
 
     res.json({
