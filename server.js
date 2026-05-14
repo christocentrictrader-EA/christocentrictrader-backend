@@ -37,7 +37,10 @@ const EA_BUNDLES = {
     label: 'ChristocentricTrader_Advanced_Tiered',
   },
 };
-app.use(cors());
+app.use(cors({
+  origin: 'https://christocentrictrader.d9thprofithub.com.ng',
+  exposedHeaders: ['Content-Disposition']
+}));
 app.use(helmet());
 app.use(express.json());
 
