@@ -51,6 +51,24 @@ const upload = multer({ dest: 'uploads/' });
 
 // === Routes ===
 
+// Debug route — check which files exist on Render's filesystem
+app.get('/api/debug-files', (req, res) => {
+  const files = [
+    'downloads/ChristocentricTrader_EA.ex5',
+    'downloads/ChristocentricTrader_Advanced.ex5',
+    'downloads/ChristocentricTrader_Advanced_Tiered.ex5',
+    'guides/ChristocentricTrader_EA_Guide.pdf',
+    'guides/ChristocentricTrader_Advanced_Guide.pdf',
+    'guides/ChristocentricTrader_Advanced_Tiered_Guide.pdf',
+  ];
+  const results = {};
+  files.forEach(f => {
+    const full = path.resolve(__dirname, f);
+    results[f] = fs.existsSync(full) ? '✅ found' : `❌ missing — resolved to: ${full}`;
+  });
+  res.json({ __dirname, cwd: process.cwd(), results });
+});
+
 // Bundled EA + PDF guide download
 app.get('/api/download/:ea', (req, res) => {
   const bundle = EA_BUNDLES[req.params.ea];
