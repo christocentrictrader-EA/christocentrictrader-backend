@@ -70,40 +70,58 @@ app.get('/api/debug-files', (req, res) => {
 });
 
 // Bundled EA + PDF guide download
-app.get('/api/download/:ea', (req, res) => {
-  const bundle = EA_BUNDLES[req.params.ea];
+app.get('/api/download/:ea', async (req, res) => {
+  try {
+    const bundle = EA_BUNDLES[req.params.ea];
 
-  if (!bundle) {
-    return res.status(404).json({ error: 'EA not found' });
+    if (!bundle) {
+      return res.status(404).json({ error: 'EA not found' });
+    }
+
+    const eaPath    = path.resolve(__dirname, bundle.ea);
+    const guidePath = path.resolve(__dirname, bundle.guide);
+
+    if (!fs.existsSync(eaPath)) {
+      return res.status(404).json({ error: `EA file not found: ${bundle.ea}` });
+    }
+    if (!fs.existsSync(guidePath)) {
+      return res.status(404).json({ error: `Guide PDF not found: ${bundle.guide}` });
+    }
+
+    const zipName = `${bundle.label}_Bundle.zip`;
+    res.setHeader('Content-Disposition', `attachment; filename="${zipName}"`);
+    res.setHeader('Content-Type', 'application/zip');
+
+    const archive = archiver('zip');
+
+    archive.on('warning', (err) => {
+      console.warn('Archiver warning:', err);
+    });
+
+    archive.on('error', (err) => {
+      console.error('Archiver error:', err);
+      if (!res.headersSent) {
+        res.status(500).json({ error: 'Failed to create zip archive' });
+      } else {
+        res.destroy();
+      }
+    });
+
+    archive.on('finish', () => {
+      console.log(`Bundle served: ${zipName}`);
+    });
+
+    archive.pipe(res);
+    archive.file(eaPath,    { name: path.basename(eaPath) });
+    archive.file(guidePath, { name: path.basename(guidePath) });
+    await archive.finalize();
+
+  } catch (err) {
+    console.error('Download route error:', err);
+    if (!res.headersSent) {
+      res.status(500).json({ error: 'Internal server error' });
+    }
   }
-
-  const eaPath    = path.resolve(__dirname, bundle.ea);
-  const guidePath = path.resolve(__dirname, bundle.guide);
-
-  // Verify both files exist before streaming
-  if (!fs.existsSync(eaPath)) {
-    return res.status(404).json({ error: `EA file not found: ${bundle.ea}` });
-  }
-  if (!fs.existsSync(guidePath)) {
-    return res.status(404).json({ error: `Guide PDF not found: ${bundle.guide}` });
-  }
-
-  const zipName = `${bundle.label}_Bundle.zip`;
-  res.setHeader('Content-Disposition', `attachment; filename="${zipName}"`);
-  res.setHeader('Content-Type', 'application/zip');
-
-  const archive = archiver('zip', { zlib: { level: 6 } });
-
-  archive.on('error', (err) => {
-    console.error('Archiver error:', err);
-    // Headers already sent — just destroy the stream
-    res.destroy();
-  });
-
-  archive.pipe(res);
-  archive.file(eaPath,    { name: path.basename(eaPath) });
-  archive.file(guidePath, { name: path.basename(guidePath) });
-  archive.finalize();
 });
 
 // License / Account submission
