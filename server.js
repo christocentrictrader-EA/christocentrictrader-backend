@@ -13,8 +13,30 @@ const axios      = require('axios');
 const fs         = require('fs');
 const FormData   = require('form-data');
 
+const path     = require('path');
+const archiver = require('archiver');
+
 const app = express();
 app.set('trust proxy', 1);
+
+// === EA → file mapping (paths relative to project root) ===
+const EA_BUNDLES = {
+  'ChristocentricTrader_EA': {
+    ea:    'downloads/ChristocentricTrader_EA.ex5',
+    guide: 'guides/ChristocentricTrader_EA_Guide.pdf',
+    label: 'ChristocentricTrader_EA',
+  },
+  'ChristocentricTrader_Advanced': {
+    ea:    'downloads/ChristocentricTrader_Advanced.ex5',
+    guide: 'guides/ChristocentricTrader_Advanced_Guide.pdf',
+    label: 'ChristocentricTrader_Advanced',
+  },
+  'ChristocentricTrader_Advanced_Tiered': {
+    ea:    'downloads/ChristocentricTrader_Advanced_Tiered.ex5',
+    guide: 'guides/ChristocentricTrader_Advanced_Tiered_Guide.pdf',
+    label: 'ChristocentricTrader_Advanced_Tiered',
+  },
+};
 app.use(cors());
 app.use(helmet());
 app.use(express.json());
@@ -25,6 +47,43 @@ app.use(limiter);
 const upload = multer({ dest: 'uploads/' });
 
 // === Routes ===
+
+// Bundled EA + PDF guide download
+app.get('/api/download/:ea', (req, res) => {
+  const bundle = EA_BUNDLES[req.params.ea];
+
+  if (!bundle) {
+    return res.status(404).json({ error: 'EA not found' });
+  }
+
+  const eaPath    = path.resolve(__dirname, bundle.ea);
+  const guidePath = path.resolve(__dirname, bundle.guide);
+
+  // Verify both files exist before streaming
+  if (!fs.existsSync(eaPath)) {
+    return res.status(404).json({ error: `EA file not found: ${bundle.ea}` });
+  }
+  if (!fs.existsSync(guidePath)) {
+    return res.status(404).json({ error: `Guide PDF not found: ${bundle.guide}` });
+  }
+
+  const zipName = `${bundle.label}_Bundle.zip`;
+  res.setHeader('Content-Disposition', `attachment; filename="${zipName}"`);
+  res.setHeader('Content-Type', 'application/zip');
+
+  const archive = archiver('zip', { zlib: { level: 6 } });
+
+  archive.on('error', (err) => {
+    console.error('Archiver error:', err);
+    // Headers already sent — just destroy the stream
+    res.destroy();
+  });
+
+  archive.pipe(res);
+  archive.file(eaPath,    { name: path.basename(eaPath) });
+  archive.file(guidePath, { name: path.basename(guidePath) });
+  archive.finalize();
+});
 
 // License / Account submission
 app.post('/api/submit-account', async (req, res) => {
