@@ -1,7 +1,7 @@
 {
   "name": "christocentrictrader-backend",
   "version": "1.0.0",
-  "description": "ChristocentricTrader EA web app backend",
+  "description": "ChristocentricTrader EA web app backend v2",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
