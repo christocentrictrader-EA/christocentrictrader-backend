@@ -15,7 +15,7 @@ const path       = require('path');
 const archiver   = require('archiver');
 
 // === License API router ===
-const licenseApi = require('./license-api'); // ← ADD
+const licenseApi = require('./license-api'); 
 
 const app = express();
 app.set('trust proxy', 1);
@@ -38,7 +38,6 @@ const EA_BUNDLES = {
     label: 'ChristocentricTrader_Advanced_Tiered',
   },
 };
-
 // === Middleware ===
 app.use(express.json()); 
 app.use(helmet());
@@ -111,124 +110,10 @@ app.get('/api/download/:ea', async (req, res) => {
     if (!res.headersSent) res.status(500).json({ error: 'Internal server error' });
   }
 });
-// License / Account submission
-app.post('/api/submit-account', async (req, res) => {
-  try {
-    const { name, email, mt5Account, broker, tier, message } = req.body;
-    const text = `
-🔑 <b>NEW LICENSE REQUEST</b>\n\n
-👤 Name: ${name}\n
-📧 Email: ${email}\n
-🔑 MT5 Account: ${mt5Account}\n
-🏦 Broker: ${broker}\n
-🎟️ Tier: ${tier}\n
-📝 Notes: ${message && message.trim() ? message : '—'}\n\n
-⏰ Submitted At: ${new Date().toUTCString()}
-`;
-    await axios.post(`https://api.telegram.org/bot${process.env.TG_BOT_TOKEN}/sendMessage`, {
-      chat_id: process.env.TG_CHAT_ID,
-      text,
-      parse_mode: "HTML"
-    });
-    res.json({ ok: true, message: "Account submission received successfully." });
-  } catch (err) {
-    console.error('Telegram send error:', err.response ? err.response.data : err.message);
-    res.status(500).json({ ok: false, error: 'Failed to submit account' });
-  }
-});
-
-// Payment proof
-app.post('/api/payment-proof', upload.single('paymentProof'), async (req, res) => {
-  try {
-    const { name, email, mt5Account, method, amount } = req.body;
-    const text = `
-💰 <b>PAYMENT PROOF RECEIVED</b>\n\n
-👤 Name: ${name}\n
-📧 Email: ${email}\n
-🔑 MT5 Account: ${mt5Account}\n
-🏦 Method: ${method}\n
-💵 Amount: ${amount}\n\n
-⏰ Submitted At: ${new Date().toUTCString()}
-`;
-    await axios.post(`https://api.telegram.org/bot${process.env.TG_BOT_TOKEN}/sendMessage`, {
-      chat_id: process.env.TG_CHAT_ID,
-      text,
-      parse_mode: "HTML"
-    });
-    if (req.file) {
-      const formData = new FormData();
-      formData.append("chat_id", process.env.TG_CHAT_ID);
-      formData.append("document", fs.createReadStream(req.file.path), { filename: req.file.originalname });
-      await axios.post(`https://api.telegram.org/bot${process.env.TG_BOT_TOKEN}/sendDocument`, formData, {
-        headers: formData.getHeaders()
-      });
-      fs.unlink(req.file.path, () => {});
-    }
-    res.json({ ok: true, message: "Proof uploaded successfully." });
-  } catch (err) {
-    console.error('Payment proof error:', err.response ? err.response.data : err.message);
-    res.status(500).json({ ok: false, error: 'Failed to submit payment proof' });
-  }
-});
-
-// AI Chat placeholder
-app.post('/api/ask-ai', async (req, res) => {
-  res.json({ answer: "🚀 AI Trading Assistant coming soon — stay tuned!", model: "placeholder" });
-});
-
-// Subscription
-app.post('/api/subscribe', async (req, res) => {
-  try {
-    const { email } = req.body;
-    if (!email || !email.includes('@')) return res.status(400).json({ ok: false, error: 'Invalid email address' });
-    const text = `
-📩 <b>NEW SUBSCRIPTION REQUEST</b>\n\n
-👤 Email: ${email}\n
-⏰ Submitted At: ${new Date().toUTCString()}
-`;
-    await axios.post(`https://api.telegram.org/bot${process.env.TG_BOT_TOKEN}/sendMessage`, {
-      chat_id: process.env.TG_CHAT_ID,
-      text,
-      parse_mode: "HTML"
-    });
-    res.json({ ok: true, message: "Subscription saved successfully." });
-  } catch (err) {
-    console.error('Subscription error:', err.response ? err.response.data : err.message);
-    res.status(500).json({ ok: false, error: 'Failed to save subscription' });
-  }
-});
-// Upload route
-app.post('/api/upload', upload.single('file'), async (req, res) => {
-  if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
-
-  try {
-    const formData = new FormData();
-    formData.append("chat_id", process.env.TG_CHAT_ID);
-    formData.append("document", fs.createReadStream(req.file.path), {
-      filename: req.file.originalname
-    });
-
-    await axios.post(`https://api.telegram.org/bot${process.env.TG_BOT_TOKEN}/sendDocument`, formData, {
-      headers: formData.getHeaders()
-    });
-
-    // Clean up uploaded file after sending
-    fs.unlink(req.file.path, () => {});
-
-    res.json({
-      ok: true,
-      file: req.file.originalname,
-      message: "File uploaded and forwarded successfully."
-    });
-  } catch (err) {
-    console.error("Upload route error:", err.response ? err.response.data : err.message);
-    res.status(500).json({ ok: false, error: 'Failed to upload file' });
-  }
-});
 
 // === Driverline License API integration ===
-// Mount the license router so /api/validate-license and /api/download work
-app.use('/api', licenseApi); // ← ADD
+app.use('/api', licenseApi);
+console.log('✅ License API mounted at /api');
 
 // === Test route ===
 app.get('/api/ping', (req, res) => {
@@ -236,10 +121,9 @@ app.get('/api/ping', (req, res) => {
 });
 
 // ✅ Correct port binding for Render
-app.listen(PORT, () => {
-  console.log(`Backend running on port ${PORT}`);
-});
 const PORT = process.env.PORT || 3000;
+
+// Start server
 app.listen(PORT, () => {
   console.log(`ChristocentricTrader + Driverline backend running on port ${PORT}`);
 });
