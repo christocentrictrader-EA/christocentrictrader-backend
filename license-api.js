@@ -52,8 +52,12 @@ const TIER_NAMES = {
 //  Returns first 8 chars of hex digest, uppercase.
 // =============================================================================
 function computeHash8(accountStr, tierStr, expiryStr) {
-  const seed   = accountStr + tierStr + expiryStr + SALT;
-  const digest = crypto.createHash('sha256').update(seed, 'utf8').digest('hex');
+  const seed = accountStr + tierStr + expiryStr + SALT;
+  // MQL5 StringToCharArray(WHOLE_ARRAY, CP_ACP) appends a null terminator.
+  // We must include it to match the CCT_LicenseGenerator.mq5 hash exactly.
+  const seedWithNull = Buffer.from(seed, 'latin1');
+  const withNull     = Buffer.concat([seedWithNull, Buffer.from([0x00])]);
+  const digest       = crypto.createHash('sha256').update(withNull).digest('hex');
   return digest.slice(0, 8).toUpperCase();
 }
 
