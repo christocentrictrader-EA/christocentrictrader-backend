@@ -1,20 +1,21 @@
 /**
- * ChristocentricTrader Backend — server.js
+ * ChristocentricTrader + Driverline Backend — server.js
  * Node.js + Express
  */
 
 require('dotenv').config();
 const express    = require('express');
 const multer     = require('multer');
-const cors       = require('cors');
 const helmet     = require('helmet');
 const rateLimit  = require('express-rate-limit');
 const axios      = require('axios');
 const fs         = require('fs');
 const FormData   = require('form-data');
+const path       = require('path');
+const archiver   = require('archiver');
 
-const path     = require('path');
-const archiver = require('archiver');
+// === License API router ===
+const licenseApi = require('./license-api'); // ← ADD
 
 const app = express();
 app.set('trust proxy', 1);
@@ -37,12 +38,26 @@ const EA_BUNDLES = {
     label: 'ChristocentricTrader_Advanced_Tiered',
   },
 };
-app.use(cors({
-  origin: 'https://christocentrictrader.d9thprofithub.com.ng',
-  exposedHeaders: ['Content-Disposition']
-}));
+
+// === Middleware ===
+app.use(express.json()); 
 app.use(helmet());
-app.use(express.json());
+
+// Updated CORS block
+app.use((req, res, next) => {
+  const allowed = [
+    'https://d9thprofithub.com.ng',
+    'https://driverline.d9thprofithub.com.ng',
+    'https://christocentrictrader.d9thprofithub.com.ng',
+    'http://localhost:3000'
+  ];
+  const origin = req.headers.origin;
+  if (allowed.includes(origin)) res.setHeader('Access-Control-Allow-Origin', origin);
+  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  if (req.method === 'OPTIONS') return res.sendStatus(204);
+  next();
+});
 
 const limiter = rateLimit({ windowMs: 60 * 1000, max: 60 });
 app.use(limiter);
@@ -51,7 +66,7 @@ const upload = multer({ dest: 'uploads/' });
 
 // === Routes ===
 
-// Debug route — check which files exist on Render's filesystem
+// Debug route
 app.get('/api/debug-files', (req, res) => {
   const files = [
     'downloads/ChristocentricTrader_EA.ex5',
@@ -73,44 +88,19 @@ app.get('/api/debug-files', (req, res) => {
 app.get('/api/download/:ea', async (req, res) => {
   try {
     const bundle = EA_BUNDLES[req.params.ea];
-
-    if (!bundle) {
-      return res.status(404).json({ error: 'EA not found' });
-    }
+    if (!bundle) return res.status(404).json({ error: 'EA not found' });
 
     const eaPath    = path.resolve(__dirname, bundle.ea);
     const guidePath = path.resolve(__dirname, bundle.guide);
 
-    if (!fs.existsSync(eaPath)) {
-      return res.status(404).json({ error: `EA file not found: ${bundle.ea}` });
-    }
-    if (!fs.existsSync(guidePath)) {
-      return res.status(404).json({ error: `Guide PDF not found: ${bundle.guide}` });
-    }
+    if (!fs.existsSync(eaPath)) return res.status(404).json({ error: `EA file not found: ${bundle.ea}` });
+    if (!fs.existsSync(guidePath)) return res.status(404).json({ error: `Guide PDF not found: ${bundle.guide}` });
 
     const zipName = `${bundle.label}_Bundle.zip`;
     res.setHeader('Content-Disposition', `attachment; filename="${zipName}"`);
     res.setHeader('Content-Type', 'application/zip');
 
     const archive = archiver('zip');
-
-    archive.on('warning', (err) => {
-      console.warn('Archiver warning:', err);
-    });
-
-    archive.on('error', (err) => {
-      console.error('Archiver error:', err);
-      if (!res.headersSent) {
-        res.status(500).json({ error: 'Failed to create zip archive' });
-      } else {
-        res.destroy();
-      }
-    });
-
-    archive.on('finish', () => {
-      console.log(`Bundle served: ${zipName}`);
-    });
-
     archive.pipe(res);
     archive.file(eaPath,    { name: path.basename(eaPath) });
     archive.file(guidePath, { name: path.basename(guidePath) });
@@ -118,17 +108,13 @@ app.get('/api/download/:ea', async (req, res) => {
 
   } catch (err) {
     console.error('Download route error:', err);
-    if (!res.headersSent) {
-      res.status(500).json({ error: 'Internal server error' });
-    }
+    if (!res.headersSent) res.status(500).json({ error: 'Internal server error' });
   }
 });
-
 // License / Account submission
 app.post('/api/submit-account', async (req, res) => {
   try {
     const { name, email, mt5Account, broker, tier, message } = req.body;
-
     const text = `
 🔑 <b>NEW LICENSE REQUEST</b>\n\n
 👤 Name: ${name}\n
@@ -137,32 +123,24 @@ app.post('/api/submit-account', async (req, res) => {
 🏦 Broker: ${broker}\n
 🎟️ Tier: ${tier}\n
 📝 Notes: ${message && message.trim() ? message : '—'}\n\n
-⏰ Submitted At: ${new Date().toUTCString()}\n\n
-━━━━━━━━━━━━━━━\n
-📌 License request logged successfully!
+⏰ Submitted At: ${new Date().toUTCString()}
 `;
-
     await axios.post(`https://api.telegram.org/bot${process.env.TG_BOT_TOKEN}/sendMessage`, {
       chat_id: process.env.TG_CHAT_ID,
       text,
       parse_mode: "HTML"
     });
-
-    res.json({
-      ok: true,
-      message: "Account submission received successfully. Please return to the site to continue."
-    });
+    res.json({ ok: true, message: "Account submission received successfully." });
   } catch (err) {
     console.error('Telegram send error:', err.response ? err.response.data : err.message);
     res.status(500).json({ ok: false, error: 'Failed to submit account' });
   }
 });
 
-// Payment proof (with file upload)
+// Payment proof
 app.post('/api/payment-proof', upload.single('paymentProof'), async (req, res) => {
   try {
     const { name, email, mt5Account, method, amount } = req.body;
-
     const text = `
 💰 <b>PAYMENT PROOF RECEIVED</b>\n\n
 👤 Name: ${name}\n
@@ -170,92 +148,55 @@ app.post('/api/payment-proof', upload.single('paymentProof'), async (req, res) =
 🔑 MT5 Account: ${mt5Account}\n
 🏦 Method: ${method}\n
 💵 Amount: ${amount}\n\n
-⏰ Submitted At: ${new Date().toUTCString()}\n\n
-━━━━━━━━━━━━━━━\n
-✅ Payment confirmation logged successfully!
+⏰ Submitted At: ${new Date().toUTCString()}
 `;
-
-    // Send the text message
     await axios.post(`https://api.telegram.org/bot${process.env.TG_BOT_TOKEN}/sendMessage`, {
       chat_id: process.env.TG_CHAT_ID,
       text,
       parse_mode: "HTML"
     });
-
-    // If a file was uploaded, send it too
     if (req.file) {
-      try {
-        const formData = new FormData();
-        formData.append("chat_id", process.env.TG_CHAT_ID);
-        // ✅ Preserve original filename so Telegram shows correct extension
-        formData.append("document", fs.createReadStream(req.file.path), {
-          filename: req.file.originalname
-        });
-
-        await axios.post(`https://api.telegram.org/bot${process.env.TG_BOT_TOKEN}/sendDocument`, formData, {
-          headers: formData.getHeaders()
-        });
-
-        // Clean up uploaded file after sending
-        fs.unlink(req.file.path, () => {});
-      } catch (fileErr) {
-        console.error("File upload to Telegram failed:", fileErr.message);
-      }
+      const formData = new FormData();
+      formData.append("chat_id", process.env.TG_CHAT_ID);
+      formData.append("document", fs.createReadStream(req.file.path), { filename: req.file.originalname });
+      await axios.post(`https://api.telegram.org/bot${process.env.TG_BOT_TOKEN}/sendDocument`, formData, {
+        headers: formData.getHeaders()
+      });
+      fs.unlink(req.file.path, () => {});
     }
-
-    res.json({
-      ok: true,
-      message: "Form submitted and proof uploaded successfully. Please click back to continue on the site."
-    });
+    res.json({ ok: true, message: "Proof uploaded successfully." });
   } catch (err) {
     console.error('Payment proof error:', err.response ? err.response.data : err.message);
     res.status(500).json({ ok: false, error: 'Failed to submit payment proof' });
   }
 });
 
-// AI Chat Route (placeholder response)
+// AI Chat placeholder
 app.post('/api/ask-ai', async (req, res) => {
-  const { question } = req.body;
-
-  res.json({
-    answer: "🚀 AI Trading Assistant coming soon — stay tuned!",
-    model: "placeholder"
-  });
+  res.json({ answer: "🚀 AI Trading Assistant coming soon — stay tuned!", model: "placeholder" });
 });
 
-// Email subscription route
+// Subscription
 app.post('/api/subscribe', async (req, res) => {
   try {
     const { email } = req.body;
-
-    if (!email || !email.includes('@')) {
-      return res.status(400).json({ ok: false, error: 'Invalid email address' });
-    }
-
+    if (!email || !email.includes('@')) return res.status(400).json({ ok: false, error: 'Invalid email address' });
     const text = `
 📩 <b>NEW SUBSCRIPTION REQUEST</b>\n\n
-👤 Email: ${email}\n\n
-⏰ Submitted At: ${new Date().toUTCString()}\n\n
-━━━━━━━━━━━━━━━\n
-✨ Stay tuned — another trader wants AI updates!
+👤 Email: ${email}\n
+⏰ Submitted At: ${new Date().toUTCString()}
 `;
-
     await axios.post(`https://api.telegram.org/bot${process.env.TG_BOT_TOKEN}/sendMessage`, {
       chat_id: process.env.TG_CHAT_ID,
       text,
       parse_mode: "HTML"
     });
-
-    res.json({
-      ok: true,
-      message: "Subscription saved successfully. You will receive updates soon — please return to the site."
-    });
+    res.json({ ok: true, message: "Subscription saved successfully." });
   } catch (err) {
     console.error('Subscription error:', err.response ? err.response.data : err.message);
     res.status(500).json({ ok: false, error: 'Failed to save subscription' });
   }
 });
-
 // Upload route
 app.post('/api/upload', upload.single('file'), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
@@ -263,7 +204,6 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
   try {
     const formData = new FormData();
     formData.append("chat_id", process.env.TG_CHAT_ID);
-    // ✅ Preserve original filename here too
     formData.append("document", fs.createReadStream(req.file.path), {
       filename: req.file.originalname
     });
@@ -286,8 +226,12 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
   }
 });
 
+// === Driverline License API integration ===
+// Mount the license router so /api/validate-license and /api/download work
+app.use('/api', licenseApi); // ← ADD
+
 // ✅ Correct port binding for Render
-const PORT = process.env.PORT;
+const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`ChristocentricTrader backend running on port ${PORT}`);
+  console.log(`ChristocentricTrader + Driverline backend running on port ${PORT}`);
 });
