@@ -230,7 +230,15 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
 // Mount the license router so /api/validate-license and /api/download work
 app.use('/api', licenseApi); // ← ADD
 
+// === Test route ===
+app.get('/api/ping', (req, res) => {
+  res.json({ ok: true, message: '✅ Backend is alive and serving routes!' });
+});
+
 // ✅ Correct port binding for Render
+app.listen(PORT, () => {
+  console.log(`Backend running on port ${PORT}`);
+});
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`ChristocentricTrader + Driverline backend running on port ${PORT}`);
