@@ -38,7 +38,6 @@ const EA_BUNDLES = {
     label: 'ChristocentricTrader_Advanced_Tiered',
   },
 };
-
 // === Middleware ===
 app.use(express.json()); 
 app.use(helmet());
@@ -111,7 +110,6 @@ app.get('/api/download/:ea', async (req, res) => {
     if (!res.headersSent) res.status(500).json({ error: 'Internal server error' });
   }
 });
-
 // === Driverline License API integration ===
 app.use('/api', licenseApi);
 console.log('✅ License API mounted at /api');

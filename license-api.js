@@ -32,12 +32,12 @@ if (!SALT) {
 //  Tier restrictions: each indicator specifies the minimum tier required.
 // =============================================================================
 const INDICATOR_MAP = {
-  'driverline-ai':     { file: 'Driverline_AI_SMC_Suite.ex5',              minTier: 2 },
+  'blue-gate-ai':     { file: 'BLUE_GATE_AI_SMC_Suite.ex5',              minTier: 2 },
   'mtf-structure':    { file: 'Driverline_MTF_Structure.ex5',             minTier: 1 },
-  'cct-advanced-mw':     { file: 'ChristocentricTrader_Advanced_MW.ex5',     minTier: 3 },
-  'driverline-indicator-mw':     { file: 'Driverline_Indicator_MW_Advanced.ex5',                   minTier: 2 },
+  'cct-advanced':     { file: 'ChristocentricTrader_Advanced_EA.ex5',     minTier: 3 },
+  'multipattern':     { file: 'MultiPattern_EA_v4.ex5',                   minTier: 2 },
   'trend-compass':    { file: 'Driverline_Trend_Compass.ex5',             minTier: 1 },
-  'driverline-indicator-pro': { file: 'Driverline_Indicator_Pro.ex5',                 minTier: 2 },
+  'liquidity-mapper': { file: 'CCT_Liquidity_Mapper.ex5',                 minTier: 2 },
 };
 
 const TIER_NAMES = {
@@ -52,12 +52,8 @@ const TIER_NAMES = {
 //  Returns first 8 chars of hex digest, uppercase.
 // =============================================================================
 function computeHash8(accountStr, tierStr, expiryStr) {
-  const seed = accountStr + tierStr + expiryStr + SALT;
-  // MQL5 StringToCharArray(WHOLE_ARRAY, CP_ACP) appends a null terminator.
-  // We must include it to match the CCT_LicenseGenerator.mq5 hash exactly.
-  const seedWithNull = Buffer.from(seed, 'latin1');
-  const withNull     = Buffer.concat([seedWithNull, Buffer.from([0x00])]);
-  const digest       = crypto.createHash('sha256').update(withNull).digest('hex');
+  const seed   = accountStr + tierStr + expiryStr + SALT;
+  const digest = crypto.createHash('sha256').update(seed, 'utf8').digest('hex');
   return digest.slice(0, 8).toUpperCase();
 }
 
