@@ -32,12 +32,12 @@ if (!SALT) {
 //  Tier restrictions: each indicator specifies the minimum tier required.
 // =============================================================================
 const INDICATOR_MAP = {
-  'blue-gate-ai':     { file: 'BLUE_GATE_AI_SMC_Suite.ex5',              minTier: 2 },
+  'driverline-ai':     { file: 'Driverline_AI_SMC_Suite.ex5',              minTier: 2 },
   'mtf-structure':    { file: 'Driverline_MTF_Structure.ex5',             minTier: 1 },
-  'cct-advanced':     { file: 'ChristocentricTrader_Advanced_EA.ex5',     minTier: 3 },
-  'multipattern':     { file: 'MultiPattern_EA_v4.ex5',                   minTier: 2 },
+  'cct-advanced-mw':     { file: 'ChristocentricTrader_Advanced_MW.ex5',     minTier: 3 },
+  'driverline-indicator-mw':     { file: 'Driverline_Indicator_MW_Advanced.ex5',                   minTier: 2 },
   'trend-compass':    { file: 'Driverline_Trend_Compass.ex5',             minTier: 1 },
-  'liquidity-mapper': { file: 'CCT_Liquidity_Mapper.ex5',                 minTier: 2 },
+  'driverline-indicator-pro': { file: 'Driverline_Indicator_Pro.ex5',                 minTier: 2 },
 };
 
 const TIER_NAMES = {
